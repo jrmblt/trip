@@ -72,6 +72,44 @@ export default function Home() {
     return Array.isArray(agenda) && agenda.length > 0 && "time" in agenda[0]
   }
 
+  const getCurrentAgendaItem = (
+    agenda: IAgendaItem[] | IDayAgenda[]
+  ): IAgendaItem | null => {
+    const now = new Date()
+    if (isSingleDayTrip(agenda)) {
+      return (
+        agenda.find((item) => {
+          const [startTime, endTime] = item.time.split(" - ")
+          const itemStart = new Date(selectedTrip?.date + "T" + startTime)
+          const itemEnd = endTime
+            ? new Date(selectedTrip?.date + "T" + endTime)
+            : new Date(itemStart.getTime() + 30 * 60000) // Default to 30 minutes if no end time
+          return now >= itemStart && now < itemEnd
+        }) || null
+      )
+    } else {
+      for (const day of agenda) {
+        if (new Date(day.date).toDateString() === now.toDateString()) {
+          return (
+            day.items.find((item) => {
+              const [startTime, endTime] = item.time.split(" - ")
+              const itemStart = new Date(day.date + "T" + startTime)
+              const itemEnd = endTime
+                ? new Date(day.date + "T" + endTime)
+                : new Date(itemStart.getTime() + 30 * 60000)
+              return now >= itemStart && now < itemEnd
+            }) || null
+          )
+        }
+      }
+    }
+    return null
+  }
+
+  const currentAgendaItem = selectedTrip
+    ? getCurrentAgendaItem(selectedTrip.agenda)
+    : null
+
   if (visibleTrips.length === 0) {
     return (
       <main className="container text-sm bg-white mx-auto h-full min-h-dvh relative flex items-center justify-center">
@@ -127,6 +165,7 @@ export default function Home() {
                     agenda={agenda}
                     currentTime={currentTime}
                     tripDate={new Date(selectedTrip.date as string)}
+                    isCurrentAgenda={currentAgendaItem?.time === agenda.time}
                   />
                 ))
               : // Multi-day trip
@@ -147,6 +186,11 @@ export default function Home() {
                           agenda={agenda}
                           currentTime={currentTime}
                           tripDate={new Date(day.date)}
+                          isCurrentAgenda={
+                            currentAgendaItem?.time === agenda.time &&
+                            new Date(day.date).toDateString() ===
+                              new Date().toDateString()
+                          }
                         />
                       ))}
                     </div>

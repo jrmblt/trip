@@ -7,27 +7,26 @@ interface IProps {
   agenda: IAgendaItem
   currentTime: Date
   tripDate: Date
+  isCurrentAgenda: boolean
 }
 
-const AgendaCard: React.FC<IProps> = (props) => {
-  const [isCompleted, setIsCompleted] = useState<boolean>(false)
+const AgendaCard = (props: IProps) => {
+  const [isCompleted, setIsCompleted] = useState(false)
   const controls = useAnimation()
 
   useEffect(() => {
-    const savedState = localStorage.getItem(
-      `agenda_${props.tripDate.toISOString()}_${props.agenda.time}`
-    )
+    const savedState = localStorage.getItem(`agenda_${props.agenda.time}`)
     if (savedState) {
       setIsCompleted(JSON.parse(savedState))
     }
-  }, [props.agenda.time, props.tripDate])
+  }, [props.agenda.time])
 
-  const parseTime = (timeStr: string): {hours: number; minutes: number} => {
+  const parseTime = (timeStr: string) => {
     const [hours, minutes] = timeStr.split(":").map(Number)
     return {hours, minutes}
   }
 
-  const calculateDuration = (time: string): string | null => {
+  const calculateDuration = (time: string) => {
     if (time.includes(" - ")) {
       const [start, end] = time.split(" - ")
       const startTime = parseTime(start)
@@ -37,7 +36,7 @@ const AgendaCard: React.FC<IProps> = (props) => {
         endTime.hours * 60 +
         endTime.minutes -
         (startTime.hours * 60 + startTime.minutes)
-      if (duration < 0) duration += 24 * 60 // If crossing midnight
+      if (duration < 0) duration += 24 * 60 // ถ้าข้ามวัน
 
       const hours = Math.floor(duration / 60)
       const minutes = duration % 60
@@ -50,7 +49,7 @@ const AgendaCard: React.FC<IProps> = (props) => {
     return null
   }
 
-  const isPastAgenda = (): boolean => {
+  const isPastAgenda = () => {
     const timeStr = props.agenda.time
     let agendaTime: Date
 
@@ -69,14 +68,14 @@ const AgendaCard: React.FC<IProps> = (props) => {
   }
 
   const handleDragEnd = (
-    _event: MouseEvent | TouchEvent | PointerEvent,
+    event: MouseEvent | TouchEvent | PointerEvent,
     info: PanInfo
   ) => {
     if (info.offset.x > 40) {
       const newState = !isCompleted
       setIsCompleted(newState)
       localStorage.setItem(
-        `agenda_${props.tripDate.toISOString()}_${props.agenda.time}`,
+        `agenda_${props.agenda.time}`,
         JSON.stringify(newState)
       )
     }
@@ -85,9 +84,10 @@ const AgendaCard: React.FC<IProps> = (props) => {
 
   return (
     <motion.div
-      className={`w-full border rounded-md flex text-stone-700 ${
-        isPastAgenda() ? "opacity-50" : ""
-      } ${isCompleted ? "bg-gray-200" : ""}
+      className={`w-full border rounded-md flex text-stone-700 
+      ${isPastAgenda() ? "opacity-50" : ""} 
+      ${isCompleted ? "bg-gray-200" : ""} 
+      ${props.isCurrentAgenda ? "border-green-500 border-2" : ""}
       cursor-grab active:cursor-grabbing`}
       whileHover={{scale: 1.02}}
       drag="x"
@@ -108,6 +108,11 @@ const AgendaCard: React.FC<IProps> = (props) => {
                 {props.agenda.time}
               </div>
             )}
+            {props.isCurrentAgenda && (
+              <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                ปัจจุบัน
+              </span>
+            )}
           </div>
           <div className="text-sm text-muted-foreground">
             {props.agenda.time && calculateDuration(props.agenda.time)}
@@ -118,14 +123,12 @@ const AgendaCard: React.FC<IProps> = (props) => {
         </div>
         <div className="text-xs md:text-sm lg:text-base text-muted-foreground">
           <MapPinIcon className="w-4 h-4 mr-1 inline" />
-          {props.agenda.location || "-"}
+          {props.agenda.location}
         </div>
-        {props.agenda.note && (
-          <div className="text-xs md:text-sm lg:text-base text-muted-foreground italic mt-2 flex items-center gap-1">
-            <p className="bg-slate-200/50">โน๊ต</p>
-            {props.agenda.note}
-          </div>
-        )}
+        <div className="text-xs md:text-sm lg:text-base text-muted-foreground italic mt-2 flex items-center gap-1">
+          <p className="bg-slate-200/50">โน๊ต</p>
+          {props.agenda.note || "-"}
+        </div>
       </div>
     </motion.div>
   )
